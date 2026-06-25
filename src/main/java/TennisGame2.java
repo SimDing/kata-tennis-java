@@ -1,8 +1,12 @@
+import java.util.Optional;
+import java.util.Set;
 
 public class TennisGame2 implements TennisGame
 {
-    public int P1point = 0;
-    public int P2point = 0;
+    private Set<Scoring> scoringNamings = Set.of(new AllScoring(), new DeuceScoring(), new DefaultScoring(), new AdvantageScoring(), new WinScoring());
+
+    public int p1Points = 0;
+    public int p2Points = 0;
     
     public String P1res = "";
     public String P2res = "";
@@ -15,89 +19,90 @@ public class TennisGame2 implements TennisGame
     }
 
     public String getScore(){
-        String score = "";
-        if (P1point == P2point && P1point < 4)
-        {
-            if (P1point==0)
-                score = "Love";
-            if (P1point==1)
-                score = "Fifteen";
-            if (P1point==2)
-                score = "Thirty";
-            score += "-All";
+        for (Scoring scoring : scoringNamings) {
+            Optional<String> result = scoring.calculateScoring(p1Points, p2Points);
+            if (result.isPresent()) {
+                return result.get();
+            }
         }
-        if (P1point==P2point && P1point>=3)
-            score = "Deuce";
-        
-        if (P1point > 0 && P2point==0)
-        {
-            if (P1point==1)
-                P1res = "Fifteen";
-            if (P1point==2)
-                P1res = "Thirty";
-            if (P1point==3)
-                P1res = "Forty";
-            
-            P2res = "Love";
-            score = P1res + "-" + P2res;
+        throw new Error();
+    }
+
+    private String singleScoreName(int points) {
+        return switch (points) {
+            case 0 -> "Love";
+            case 1 -> "Fifteen";
+            case 2 -> "Thirty";
+            case 3 -> "Forty";
+            default -> throw new IllegalArgumentException(points + " has no canonic name");
+        };
+    }
+
+    interface Scoring {
+        Optional<String> calculateScoring(int p1Score, int p2Score);
+    }
+
+    class AllScoring implements Scoring {
+        @Override
+        public Optional<String> calculateScoring(int p1Score, int p2Score) {
+            if (p1Score != p2Score) return Optional.empty();
+            if (p1Score > 2) return Optional.empty();
+            return Optional.of(singleScoreName(p1Score) + "-All");
         }
-        if (P2point > 0 && P1point==0)
-        {
-            if (P2point==1)
-                P2res = "Fifteen";
-            if (P2point==2)
-                P2res = "Thirty";
-            if (P2point==3)
-                P2res = "Forty";
-            
-            P1res = "Love";
-            score = P1res + "-" + P2res;
+    }
+
+    class DeuceScoring implements Scoring {
+        @Override
+        public Optional<String> calculateScoring(int p1Score, int p2Score) {
+            if (p1Score != p2Score) return Optional.empty();
+            if (p1Score < 3) return Optional.empty();
+            return Optional.of("Deuce");
         }
-        
-        if (P1point>P2point && P1point < 4)
-        {
-            if (P1point==2)
-                P1res="Thirty";
-            if (P1point==3)
-                P1res="Forty";
-            if (P2point==1)
-                P2res="Fifteen";
-            if (P2point==2)
-                P2res="Thirty";
-            score = P1res + "-" + P2res;
-        }
-        if (P2point>P1point && P2point < 4)
-        {
-            if (P2point==2)
-                P2res="Thirty";
-            if (P2point==3)
-                P2res="Forty";
-            if (P1point==1)
-                P1res="Fifteen";
-            if (P1point==2)
-                P1res="Thirty";
-            score = P1res + "-" + P2res;
+    }
+
+    class DefaultScoring implements Scoring {
+
+        @Override
+        public Optional<String> calculateScoring(int p1Score, int p2Score) {
+            if (p1Score == p2Score) return Optional.empty();
+            if (Math.max(p1Score, p2Score) >= 4) return Optional.empty();
+            return Optional.of(singleScoreName(p1Score) + "-" + singleScoreName(p2Score));
         }
         
-        if (P1point > P2point && P2point >= 3)
-        {
-            score = "Advantage player1";
+    }
+
+    class AdvantageScoring implements Scoring {
+
+        @Override
+        public Optional<String> calculateScoring(int p1Score, int p2Score) {
+            if (Math.min(p1Score, p2Score) < 3) return Optional.empty();
+            if (Math.abs(p1Score - p2Score) > 1) return Optional.empty();
+            if (p1Score > p2Score) {
+                return Optional.of("Advantage player1");
+            } else if (p2Score > p1Score) {
+                return Optional.of("Advantage player2");
+            } else {
+                return Optional.empty();
+            }
         }
         
-        if (P2point > P1point && P1point >= 3)
-        {
-            score = "Advantage player2";
+    }
+
+    class WinScoring implements Scoring {
+
+        @Override
+        public Optional<String> calculateScoring(int p1Score, int p2Score) {
+            if (Math.max(p1Score, p2Score) < 4) return Optional.empty();
+            if (Math.abs(p1Score - p2Score) < 2) return Optional.empty();
+            if (p1Score > p2Score) {
+                return Optional.of("Win for player1");
+            } else if (p2Score > p1Score) {
+                return Optional.of("Win for player2");
+            } else {
+                return Optional.empty();
+            }
         }
         
-        if (P1point>=4 && P2point>=0 && (P1point-P2point)>=2)
-        {
-            score = "Win for player1";
-        }
-        if (P2point>=4 && P1point>=0 && (P2point-P1point)>=2)
-        {
-            score = "Win for player2";
-        }
-        return score;
     }
     
     public void SetP1Score(int number){
@@ -119,11 +124,11 @@ public class TennisGame2 implements TennisGame
     }
     
     public void P1Score(){
-        P1point++;
+        p1Points++;
     }
     
     public void P2Score(){
-        P2point++;
+        p2Points++;
     }
 
     public void wonPoint(String player) {
